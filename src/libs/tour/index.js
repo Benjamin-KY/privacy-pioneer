@@ -65,7 +65,11 @@ export const homeSteps = [
       3/5
     </div>),
     spotlightClicks: true,
-    hideFooter: true,
+  },
+  {
+    target: "#seeAllTour",
+    content: ""
+    // NOTE: THIS NEEDS TO BE HERE
   },
 ];
 
@@ -74,7 +78,7 @@ export const HomeTour = ({ steps }) => {
 
   const checkEnd = data => {
     const { action, index, status, type } = data;
-    if (STATUS.FINISHED == status) {
+    if (index === 4) {
       history.push("/search")
     } else if (STATUS.SKIPPED == status) {
       startStopTour()
@@ -160,6 +164,9 @@ export const SeeAllTour = ({ steps }) => {
 
   const checkEnd = data => {
     const { action, index, status, type } = data;
+    if (index == 0) {
+      // this.joyride.next()
+    }
     if (STATUS.FINISHED == status) {
       startStopTour()
       history.push('/')
