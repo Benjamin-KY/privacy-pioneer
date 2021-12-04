@@ -221,6 +221,8 @@ export const typeEnum = Object.freeze({
   // location types
   coarseLocation: "coarseLocation",
   fineLocation: "fineLocation",
+  latitude: "latitude",
+  longitude: "longitude",
   zipCode: "zipCode",
   streetAddress: "streetAddress",
   city: "city",
