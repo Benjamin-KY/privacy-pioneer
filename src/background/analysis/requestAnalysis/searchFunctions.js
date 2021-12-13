@@ -16,6 +16,7 @@ import { watchlistKeyval } from "../../../libs/indexed-db/openDB.js"
 import { watchlistHashGen, createEvidenceObj } from "../utility/util.js"
 import { COORDINATE_PAIR_DIST, FINE_LOCATION_BOUND, COARSE_LOCATION_BOUND } from "../constants.js"
 import { validateContextNLP } from "../nlp/tokenize/tokenizeContext.js"
+import { getContextAndTokenize } from "../nlp/tokenize/tokenizeStatic.js"
 
 
 /**
@@ -178,9 +179,10 @@ function coordinateSearch(strReq, locData, rootUrl, reqUrl) {
         if (strReq[stIdx - 1 ] == "-") {
           stIdx -= 1
         }
-        
+
         // call nlp model to validate the finding
         if (validateContextNLP(strReq, latLng, [stIdx, endIdx])) {
+
           output.push(createEvidenceObj(permissionEnum.location, rootUrl, strReq, reqUrl, typ, [stIdx, endIdx]))
         }
         // if we find evidence for this request we return an index that will terminate the loop
@@ -254,6 +256,7 @@ function regexSearch(strReq, keywordObj, rootUrl, reqUrl, type, perm = permissio
       const endIdx = res + keyword.length
       // call nlp model to validate the finding
       if (validateContextNLP(strReq, type, [stIdx, endIdx])) {
+        console.log(getContextAndTokenize(strReq, [stIdx, endIdx]))
         output.push(createEvidenceObj(perm, rootUrl, strReq, reqUrl, type, [stIdx, endIdx], keywordIDWatch)) 
       }
     }
@@ -271,6 +274,7 @@ function regexSearch(strReq, keywordObj, rootUrl, reqUrl, type, perm = permissio
       const endIdx = stIdx + len
       // call nlp model to validate the finding
       if (rootUrl && validateContextNLP(strReq, type, [stIdx, endIdx])) {
+        console.log(getContextAndTokenize(strReq, [stIdx, endIdx]))
          output.push(createEvidenceObj(perm, rootUrl, strReq, reqUrl, type, [stIdx, endIdx], keywordIDWatch)) 
       }
     }

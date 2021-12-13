@@ -8,7 +8,7 @@ privacy-tech-lab, https://www.privacytechlab.org/
 const tokenMapping = {
     "latitude": "<TARGET-LAT>",
     "longitude": "<TARGET-LNG>",
-    "zipCode": "<TARGET-ZIP",
+    "zipCode": "<TARGET-ZIP>",
     "streetAddress": "<TARGET-ADDR>",
     "city": "<TARGET-CITY>",
     "state": "<TARGET-STATE>",
@@ -42,8 +42,8 @@ function tokenizeContext(strContext, tokenType, indices) {
  */
 function validateContextNLP(strContext, tokenType, indices) {
     const preProcessedContext = tokenizeContext(strContext, tokenType, indices)
-    console.log(preProcessedContext)
+    //console.log(preProcessedContext)
     return true
 }
 
-export { tokenizeContext, validateContextNLP }
+export { tokenizeContext, validateContextNLP, tokenMapping }
