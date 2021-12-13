@@ -15,6 +15,7 @@ import { getHostname } from "../utility/util.js"
 import { watchlistKeyval } from "../../../libs/indexed-db/openDB.js"
 import { watchlistHashGen, createEvidenceObj } from "../utility/util.js"
 import { COORDINATE_PAIR_DIST, FINE_LOCATION_BOUND, COARSE_LOCATION_BOUND } from "../constants.js"
+import { validateContextNLP } from "../nlp/tokenize/tokenizeContext.js"
 
 
 /**
@@ -152,26 +153,36 @@ function coordinateSearch(strReq, locData, rootUrl, reqUrl) {
    * 
    * @param {Array<Iterator>} matchArr An array with possible floating point numbers
    * @param {number} goal Either a latitude or a longitude.
+   * @param {string} latLng Either "latitude" or "longitude" depending on which we're looking for.
    * @param {number} arrIndex An index of where in matchArr the previous coordinate was found
    * @param {number} matchIndex The index in the original request string of the first coordinate.
    * @returns {number} The next index to be searched. Or the length of the array if a pair is found (This will terminate the outer while loop).
    */
-  function findPair(matchArr, goal, arrIndex, matchIndex, deltaBound, typ) {
+  function findPair(matchArr, goal, latLng, arrIndex, matchIndex, deltaBound, typ) {
     // we want lat and lng to be in close proximity
     let bound = matchIndex + COORDINATE_PAIR_DIST // see constants.js for exp
     let j = arrIndex + 1
     while ( j < matchArr.length ) {
       let match = matchArr[j]
-      let startIndex = match.index + 1
-      let endIndex = startIndex + match[0].length - 1
+      let stIdx = match.index + 1
+      let endIdx = stIdx + match[0].length - 1
       const asFloat = cleanMatch(match[0])
 
       // potential is too far away, move on
-      if (startIndex > bound) { return arrIndex + 1 }
+      if (stIdx > bound) { return arrIndex + 1 }
 
       let delta = Math.abs(asFloat - goal)
       if (delta < deltaBound) {
-        output.push(createEvidenceObj(permissionEnum.location, rootUrl, strReq, reqUrl, typ, [startIndex, endIndex]))
+
+        // check for "negative" char preceding float 
+        if (strReq[stIdx - 1 ] == "-") {
+          stIdx -= 1
+        }
+        
+        // call nlp model to validate the finding
+        if (validateContextNLP(strReq, latLng, [stIdx, endIdx])) {
+          output.push(createEvidenceObj(permissionEnum.location, rootUrl, strReq, reqUrl, typ, [stIdx, endIdx]))
+        }
         // if we find evidence for this request we return an index that will terminate the loop
         return matchArr.length
       }
@@ -199,8 +210,8 @@ function coordinateSearch(strReq, locData, rootUrl, reqUrl) {
       let deltaLat = Math.abs(asFloat - absLat)
       let deltaLng = Math.abs(asFloat - absLng)
 
-      if (deltaLat < deltaBound) { i = findPair(matchArr, absLng, i, startIndex, deltaBound, typ) }
-      else if (deltaLng < deltaBound ) { i = findPair(matchArr, absLat, i, startIndex, deltaBound, typ) }
+      if (deltaLat < deltaBound) { i = findPair(matchArr, absLng, typeEnum.longitude, i, startIndex, deltaBound, typ) }
+      else if (deltaLng < deltaBound ) { i = findPair(matchArr, absLat, typeEnum.latitude, i, startIndex, deltaBound, typ) }
       else { i += 1}
     }
   }
@@ -238,19 +249,30 @@ function regexSearch(strReq, keywordObj, rootUrl, reqUrl, type, perm = permissio
     let fixed = escapeRegExp(keyword)
     const re = new RegExp(`${fixed}`, "i");
     const res = strReq.search(re)
-    if (res != -1) { output.push(createEvidenceObj(perm, rootUrl, strReq, reqUrl, type, [res, res + keyword.length], keywordIDWatch)) }
+    if (res != -1) {
+      const stIdx = res
+      const endIdx = res + keyword.length
+      // call nlp model to validate the finding
+      if (validateContextNLP(strReq, type, [stIdx, endIdx])) {
+        output.push(createEvidenceObj(perm, rootUrl, strReq, reqUrl, type, [stIdx, endIdx], keywordIDWatch)) 
+      }
+    }
   } 
   else if (keyword instanceof RegExp) {
     const res = strReq.match(keyword)
     if (res != null) {
       var len = res[0].length
-      var startIndex = res.index
+      var stIdx = res.index
       // update indexes based on how the regex was structured
       if (type == typeEnum.zipCode) {
-        startIndex += 1
+        stIdx += 1
         len -= 2
       }
-      if (rootUrl) { output.push(createEvidenceObj(perm, rootUrl, strReq, reqUrl, type, [startIndex, startIndex + len], keywordIDWatch)) }
+      const endIdx = stIdx + len
+      // call nlp model to validate the finding
+      if (rootUrl && validateContextNLP(strReq, type, [stIdx, endIdx])) {
+         output.push(createEvidenceObj(perm, rootUrl, strReq, reqUrl, type, [stIdx, endIdx], keywordIDWatch)) 
+      }
     }
   }
   return output
